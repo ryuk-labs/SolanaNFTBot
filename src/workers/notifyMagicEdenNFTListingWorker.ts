@@ -84,6 +84,8 @@ export default function newWorker(
         }
 
         if (
+          config.degensToWatch &&
+          config.degensToWatch?.length > 0 &&
           config.degensToWatch?.includes(nftData.name.split("#")[1]) === false
         ) {
           return;

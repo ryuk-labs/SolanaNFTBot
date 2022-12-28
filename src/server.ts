@@ -19,6 +19,7 @@ import initTwitterClient from "lib/twitter";
 import notifyTwitter from "lib/twitter/notifyTwitter";
 import queue from "queue";
 import initWorkers from "workers/initWorkers";
+import notifyMagicEdenNFTListingWorker from "workers/notifyMagicEdenNFTListingWorker";
 import notifyMagicEdenNFTSalesWorker, {
   CollectionActivity,
 } from "workers/notifyMagicEdenNFTSalesWorker";
@@ -221,6 +222,13 @@ import { Worker } from "workers/types";
       });
       workers.push(
         notifyMagicEdenNFTSalesWorker(
+          notifier,
+          web3Conn,
+          config.magicEdenConfig
+        )
+      );
+      workers.push(
+        notifyMagicEdenNFTListingWorker(
           notifier,
           web3Conn,
           config.magicEdenConfig

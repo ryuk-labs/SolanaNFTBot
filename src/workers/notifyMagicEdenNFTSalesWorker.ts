@@ -1,12 +1,12 @@
+import { Connection } from "@solana/web3.js";
 import axios from "axios";
 import { MagicEdenConfig } from "config";
+import logger from "lib/logger";
 import { NFTSale, SaleMethod } from "lib/marketplaces";
 import MagicEden from "lib/marketplaces/magicEden";
+import { NotificationType, Notifier } from "lib/notifier";
 import { fetchNFTData } from "lib/solana/NFTData";
 import { Worker } from "./types";
-import { Connection } from "@solana/web3.js";
-import logger from "lib/logger";
-import { NotificationType, Notifier } from "lib/notifier";
 
 export interface CollectionActivity {
   signature: string;
@@ -82,6 +82,15 @@ export default function newWorker(
         if (!nftData) {
           return;
         }
+
+        if (
+          config.degensToWatch &&
+          config.degensToWatch?.length > 0 &&
+          config.degensToWatch?.includes(nftData.name.split("#")[1]) === false
+        ) {
+          return;
+        }
+
         const nftSale: NFTSale = {
           transaction: activity.signature,
           soldAt: new Date((activity.blockTime || 0) * 1000),

@@ -15,7 +15,8 @@
     "test": "jest --no-watchman",
     "lint-format": "prettier -c ./src/**/*.ts",
     "fix-format": "prettier -w ./src/**/*.ts",
-    "transaction": "ts-node --project tsconfig.json -r dotenv/config ./src/cli/get-confirmed-transaction.ts"
+    "transaction": "ts-node --project tsconfig.json -r dotenv/config ./src/cli/get-confirmed-transaction.ts",
+    "deploy:prod": "npm run build && pm2 start ecosystem.config.js --only prod"
   },
   "dependencies": {
     "@discordjs/builders": "^0.8.1",

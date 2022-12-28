@@ -1,5 +1,4 @@
 import { Connection, ParsedConfirmedTransaction } from "@solana/web3.js";
-import { MagicEdenConfig } from "config";
 import NFTData from "lib/solana/NFTData";
 
 export enum SaleMethod {
@@ -28,9 +27,12 @@ export interface Transfer {
   };
 }
 
-export interface NFTSale {
-  transaction: string;
+export interface NFTSale extends NFTList {
   buyer: string;
+}
+
+export interface NFTList {
+  transaction: string;
   seller?: string;
   method: SaleMethod;
   token: string;

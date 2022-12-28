@@ -1,15 +1,17 @@
-import {Config} from "config";
-import { initClient as initDiscordClient } from "lib/discord";
-import initTwitterClient from "lib/twitter";
-import notifyDiscordSale from "lib/discord/notifyDiscordSale";
-import notifyTwitter from "lib/twitter/notifyTwitter";
-import { Project } from "workers/notifyNFTSalesWorker";
-import logger from "lib/logger";
-import queue from "queue";
+import { Config } from "config";
 import Discord from "discord.js";
+import { initClient as initDiscordClient } from "lib/discord";
+import notifyDiscordList from "lib/discord/notifyDiscordList";
+import notifyDiscordSale from "lib/discord/notifyDiscordSale";
+import logger from "lib/logger";
+import initTwitterClient from "lib/twitter";
+import notifyTwitter from "lib/twitter/notifyTwitter";
+import queue from "queue";
+import { Project } from "workers/notifyNFTSalesWorker";
 
 export enum NotificationType {
   Sale,
+  List,
 }
 
 export interface Notifier {
@@ -37,7 +39,7 @@ function queueNotification(
 }
 
 export async function newNotifierFactory(config: Config, nQueue: queue) {
-  let discordClient:Discord.Client;
+  let discordClient: Discord.Client;
   if (config.discordBotToken) {
     discordClient = await initDiscordClient(config.discordBotToken);
   }
@@ -64,10 +66,32 @@ export async function newNotifierFactory(config: Config, nQueue: queue) {
         }
       }
 
+      async function notifyList(data: any) {
+        if (discordClient) {
+          queueNotification(nQueue, Platform.Discord, async () => {
+            await notifyDiscordList(
+              discordClient,
+              project.discordChannelId,
+              data
+            );
+          });
+        }
+
+        if (twitterClient) {
+          queueNotification(nQueue, Platform.Twitter, async () => {
+            await notifyTwitter(twitterClient, data);
+          });
+        }
+      }
+
       return {
         async notify(nType: NotificationType, data: any) {
           if (nType === NotificationType.Sale) {
             await notifySale(data);
+            return;
+          }
+          if (nType === NotificationType.List) {
+            await notifyList(data);
             return;
           }
         },

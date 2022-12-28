@@ -1,23 +1,29 @@
+import { ParsedTransactionWithMeta } from "@solana/web3.js";
+import axios from "axios";
+import { Env, loadConfig } from "config";
+import dotenv from "dotenv";
 import express from "express";
 import { initClient as initDiscordClient } from "lib/discord";
-import initWorkers from "workers/initWorkers";
+import notifyDiscordList from "lib/discord/notifyDiscordList";
+import notifyDiscordSale, { getStatus } from "lib/discord/notifyDiscordSale";
+import logger from "lib/logger";
+import { NFTSale, parseNFTSale, SaleMethod } from "lib/marketplaces";
+import MagicEden from "lib/marketplaces/magicEden";
+import { newNotifierFactory } from "lib/notifier";
 import {
   maxSupportedTransactionVersion,
   newConnection,
 } from "lib/solana/connection";
-import dotenv from "dotenv";
-import notifyDiscordSale, { getStatus } from "lib/discord/notifyDiscordSale";
-import { Env, loadConfig } from "config";
-import { Worker } from "workers/types";
-import notifyNFTSalesWorker from "workers/notifyNFTSalesWorker";
-import notifyMagicEdenNFTSalesWorker from "workers/notifyMagicEdenNFTSalesWorker";
-import { parseNFTSale } from "lib/marketplaces";
-import { ParsedTransactionWithMeta } from "@solana/web3.js";
-import notifyTwitter from "lib/twitter/notifyTwitter";
-import logger from "lib/logger";
-import { newNotifierFactory } from "lib/notifier";
+import { fetchNFTData } from "lib/solana/NFTData";
 import initTwitterClient from "lib/twitter";
+import notifyTwitter from "lib/twitter/notifyTwitter";
 import queue from "queue";
+import initWorkers from "workers/initWorkers";
+import notifyMagicEdenNFTSalesWorker, {
+  CollectionActivity,
+} from "workers/notifyMagicEdenNFTSalesWorker";
+import notifyNFTSalesWorker from "workers/notifyNFTSalesWorker";
+import { Worker } from "workers/types";
 
 (async () => {
   try {
@@ -91,6 +97,92 @@ import queue from "queue";
         if (discordClient) {
           const channelId = (req.query["channelId"] as string) || "";
           await notifyDiscordSale(discordClient, channelId, nftSale);
+        }
+      }
+
+      const twitterClient = await initTwitterClient(config.twitter);
+      const sendTweet = (req.query["tweet"] as string) || "";
+      if (sendTweet && twitterClient) {
+        await notifyTwitter(twitterClient, nftSale).catch((err) => {
+          logger.error("Error occurred when notifying twitter", err);
+        });
+      }
+
+      res.send(`NFT Sales parsed: \n${JSON.stringify(nftSale)}`);
+    });
+
+    server.get("/test-list-tx", async (req, res) => {
+      const signature = (req.query["signature"] as string) || "";
+      if (!signature) {
+        res.send(`no signature in query param`);
+        return;
+      }
+
+      let activities: CollectionActivity[] = [];
+      try {
+        // Reference: https://api.magiceden.dev/#95fed531-fd1f-4cbb-8137-30e0f2294cd7
+        const res = await axios.get(
+          `${config.magicEdenConfig.url}/collections/${config.magicEdenConfig.collection}/activities?offset=0&limit=100`
+        );
+        activities = res.data as CollectionActivity[];
+      } catch (e) {
+        logger.error(e);
+        res.send(e);
+        return;
+      }
+
+      const sortByEarliest = activities.sort(
+        (a: CollectionActivity, b: CollectionActivity) => {
+          return a.blockTime - b.blockTime;
+        }
+      );
+
+      const activity = activities.find((item) => item.signature === signature);
+      if (!activity) {
+        res.send(`signature not found`);
+        return;
+      }
+
+      if (activity.type !== "list") {
+        res.send(`type !== list`);
+        return;
+      }
+
+      const nftData = await fetchNFTData(web3Conn, activity.tokenMint);
+      if (!nftData) {
+        res.send(`nftData invalid`);
+        return;
+      }
+      if (
+        config.magicEdenConfig.degensToWatch?.includes(
+          nftData.name.split("#")[1]
+        ) === false
+      ) {
+        res.send(`${nftData.name} not in watch list`);
+        return;
+      }
+      const nftSale: NFTSale = {
+        transaction: activity.signature,
+        soldAt: new Date((activity.blockTime || 0) * 1000),
+        seller: activity.seller,
+        buyer: activity.buyer,
+        token: activity.tokenMint,
+        method: SaleMethod.Direct,
+        marketplace: MagicEden,
+        transfers: [],
+        nftData,
+        getPriceInLamport() {
+          return activity.price / 1000000;
+        },
+        getPriceInSOL() {
+          return activity.price;
+        },
+      };
+      if (config.discordBotToken) {
+        const discordClient = await initDiscordClient(config.discordBotToken);
+        if (discordClient) {
+          const channelId = (req.query["channelId"] as string) || "";
+          await notifyDiscordList(discordClient, channelId, nftSale);
         }
       }
 

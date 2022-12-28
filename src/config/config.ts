@@ -17,6 +17,7 @@ export interface MagicEdenConfig {
   url: string;
   collection: string;
   discordChannelId: string;
+  degensToWatch?: string[];
 }
 
 export interface Config {
@@ -87,6 +88,7 @@ export function loadConfig(env: Env): MutableConfig {
       url: env.MAGIC_EDEN_URL || "",
       collection: env.MAGIC_EDEN_COLLECTION || "",
       discordChannelId: env.MAGIC_EDEN_DISCORD_CHANNEL_ID || "",
+      degensToWatch: (env.DEGENS_TO_WATCH || "").split(";"),
     },
   };
 

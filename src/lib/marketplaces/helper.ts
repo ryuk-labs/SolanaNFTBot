@@ -7,10 +7,10 @@ import {
   ParsedMessageAccount,
   TokenBalance,
 } from "@solana/web3.js";
-import { Marketplace, NFTSale, SaleMethod, Transfer } from "./types";
 import { LamportPerSOL } from "../solana";
 import { fetchNFTData } from "../solana/NFTData";
 import solanart from "./solanart";
+import { Marketplace, NFTSale, SaleMethod, Transfer } from "./types";
 
 export function getTransfersFromInnerInstructions(
   innerInstructions: any
@@ -281,9 +281,9 @@ export async function parseNFTSaleOnTx(
         buyer
       );
     }
-  } else if (transfers.length === 1) {
-    // There should be more than one transfers as all NFT contains royalties and seller revenue
-    return null;
+    // } else if (transfers.length === 1) {
+    //   // There should be more than one transfers as all NFT contains royalties and seller revenue
+    //   return null;
   } else {
     priceInLamport = transfers.reduce<number>((prev, current) => {
       return prev + current.revenue.amount;

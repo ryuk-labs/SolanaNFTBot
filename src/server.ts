@@ -123,7 +123,7 @@ import { Worker } from "workers/types";
       try {
         // Reference: https://api.magiceden.dev/#95fed531-fd1f-4cbb-8137-30e0f2294cd7
         const res = await axios.get(
-          `${config.magicEdenConfig.url}/collections/${config.magicEdenConfig.collection}/activities?offset=0&limit=100`
+          `${config.magicEdenConfig.url}/collections/${config.magicEdenConfig.collection}/activities?offset=0&limit=1000`
         );
         activities = res.data as CollectionActivity[];
       } catch (e) {

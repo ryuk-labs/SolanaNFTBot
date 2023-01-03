@@ -7,6 +7,7 @@ import {
   ParsedMessageAccount,
   TokenBalance,
 } from "@solana/web3.js";
+import { Env, loadConfig } from "config";
 import { LamportPerSOL } from "../solana";
 import { fetchNFTData } from "../solana/NFTData";
 import solanart from "./solanart";
@@ -265,6 +266,18 @@ export async function parseNFTSaleOnTx(
   if (!nftData) {
     return null;
   }
+
+  const config = loadConfig(process.env as Env);
+  if (
+    config.magicEdenConfig?.degensToWatch &&
+    config.magicEdenConfig?.degensToWatch?.length > 0 &&
+    config.magicEdenConfig?.degensToWatch?.includes(
+      nftData.name.split("#")[1]
+    ) === false
+  ) {
+    return null;
+  }
+
   let priceInLamport = 0;
   let transfers = getTransfersFromInnerInstructions(
     innerInstructions[transferInstructionIndex]
